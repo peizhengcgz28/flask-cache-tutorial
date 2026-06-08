@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flask 缓存与限流教学演示</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 15px/1.6 -apple-system, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #333; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+  .header { background: linear-gradient(135deg, #1a1a2e, #16213e); color: #fff; padding: 32px 0; text-align: center; }
+  .header h1 { font-size: 26px; letter-spacing: 1px; }
+  .header p { opacity: .75; margin-top: 6px; font-size: 14px; }
+
+  .tabs { display: flex; gap: 0; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 24px; }
+  .tabs button { flex: 1; padding: 14px 8px; border: none; background: transparent; cursor: pointer; font-size: 14px; font-weight: 600; color: #666; transition: .2s; position: relative; }
+  .tabs button:hover { background: #f5f5f5; }
+  .tabs button.active { color: #1a73e8; background: #e8f0fe; }
+  .tabs button.active::after { content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 3px; background: #1a73e8; border-radius: 3px 3px 0 0; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,.06); padding: 24px; margin-bottom: 20px; }
+  .card h3 { font-size: 16px; color: #1a1a2e; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .badge-hit { background: #e6f4ea; color: #1e7e34; }
+  .badge-miss { background: #fce8e6; color: #c5221f; }
+  .badge-limit { background: #fff3cd; color: #856404; }
+  .badge-ok { background: #d4edda; color: #155724; }
+
+  .btn { display: inline-block; padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: .2s; }
+  .btn-primary { background: #1a73e8; color: #fff; }
+  .btn-primary:hover { background: #1557b0; }
+  .btn-danger { background: #dc3545; color: #fff; }
+  .btn-danger:hover { background: #b02a37; }
+  .btn-outline { background: transparent; border: 1.5px solid #1a73e8; color: #1a73e8; }
+  .btn-outline:hover { background: #e8f0fe; }
+  .btn-sm { padding: 5px 14px; font-size: 13px; }
+  .btn + .btn { margin-left: 8px; }
+
+  .flex-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .input { padding: 8px 12px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 14px; width: 200px; outline: none; }
+  .input:focus { border-color: #1a73e8; }
+
+  .result-box { background: #f8f9fa; border-radius: 8px; padding: 16px; margin-top: 14px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all; border: 1px solid #e9ecef; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+  .stat-item { text-align: center; padding: 16px 8px; background: #f8f9fa; border-radius: 8px; }
+  .stat-item .num { font-size: 28px; font-weight: 700; color: #1a73e8; }
+  .stat-item .label { font-size: 12px; color: #666; margin-top: 4px; }
+
+  .cache-visual { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+  .cache-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+  .cache-dot.hit { background: #34a853; box-shadow: 0 0 6px rgba(52,168,83,.5); }
+  .cache-dot.miss { background: #ea4335; box-shadow: 0 0 6px rgba(234,67,53,.5); }
+
+  .history-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .history-item { padding: 4px 12px; border-radius: 14px; font-size: 12px; font-weight: 600; }
+  .history-item.hit { background: #e6f4ea; color: #1e7e34; border: 1px solid #a8dab5; }
+  .history-item.miss { background: #fce8e6; color: #c5221f; border: 1px solid #f5c6cb; }
+
+  .progress-bar { height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+  .progress-bar .fill { height: 100%; background: linear-gradient(90deg, #34a853, #1a73e8); border-radius: 4px; transition: width .4s; }
+
+  .rate-status { padding: 12px 16px; border-radius: 8px; margin-top: 12px; font-weight: 600; }
+  .rate-ok { background: #e6f4ea; color: #155724; border-left: 4px solid #34a853; }
+  .rate-warn { background: #fff3cd; color: #856404; border-left: 4px solid #ffc107; }
+  .rate-block { background: #fce8e6; color: #721c24; border-left: 4px solid #dc3545; }
+
+  @media (max-width: 600px) {
+    .tabs button { font-size: 12px; padding: 10px 4px; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="container">
+    <h1>Flask 缓存与限流教学演示</h1>
+    <p>交互式体验 · 缓存命中可视化 · 限流实时反馈</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="tabs">
+    <button class="active" data-tab="overview">概览</button>
+    <button data-tab="cache">缓存演示</button>
+    <button data-tab="ratelimit">限流演示</button>
+    <button data-tab="stats">统计</button>
+  </div>
+
+  <!-- 概览 -->
+  <div class="tab-content active" id="tab-overview">
+    <div class="card">
+      <h3>项目介绍</h3>
+      <p>本项目演示 <strong>Flask-Caching</strong> 和 <strong>Flask-Limiter</strong> 两大扩展的核心用法。</p>
+      <ul style="margin-top:10px;padding-left:20px">
+        <li><strong>缓存技术</strong> — 减少重复计算和数据库查询，提升响应速度</li>
+        <li><strong>限流技术</strong> — 防止接口被恶意刷请求，保护后端资源</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>API 端点速览</h3>
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <tr style="border-bottom:2px solid #eee"><th style="text-align:left;padding:8px 4px">端点</th><th style="text-align:left;padding:8px 4px">说明</th><th style="text-align:left;padding:8px 4px">缓存</th><th style="text-align:left;padding:8px 4px">限流</th></tr>
+        <tr style="border-bottom:1px solid #f0f0f0"><td style="padding:8px 4px"><code>/users</code></td><td>获取所有用户</td><td><span class="badge badge-hit">60s</span></td><td><span class="badge badge-ok">60/h</span></td></tr>
+        <tr style="border-bottom:1px solid #f0f0f0"><td style="padding:8px 4px"><code>/user/&lt;id&gt;</code></td><td>获取单个用户</td><td><span class="badge badge-hit">60s</span></td><td><span class="badge badge-ok">60/h</span></td></tr>
+        <tr style="border-bottom:1px solid #f0f0f0"><td style="padding:8px 4px"><code>/search?q=</code></td><td>搜索用户</td><td><span class="badge badge-hit">30s</span></td><td><span class="badge badge-ok">30/m</span></td></tr>
+        <tr style="border-bottom:1px solid #f0f0f0"><td style="padding:8px 4px"><code>/slow</code></td><td>模拟慢接口（2s）</td><td><span class="badge badge-miss">无</span></td><td><span class="badge badge-limit">5/m</span></td></tr>
+        <tr><td style="padding:8px 4px"><code>/stats</code></td><td>系统统计</td><td><span class="badge badge-miss">无</span></td><td><span class="badge badge-ok">无</span></td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h3>数据库管理</h3>
+      <p style="margin-bottom:10px">重置数据库表结构和演示数据（清空统计、重建用户数据）。</p>
+      <button class="btn btn-danger btn-sm" onclick="reinitDb()">重新初始化数据库</button>
+      <div class="result-box" id="db-result" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- 缓存演示 -->
+  <div class="tab-content" id="tab-cache">
+    <div class="card">
+      <h3>缓存命中测试</h3>
+      <p style="margin-bottom:10px">连续请求同一接口，观察 <span class="badge badge-hit">HIT</span> 与 <span class="badge badge-miss">MISS</span> 变化。</p>
+      <div class="flex-row">
+        <button class="btn btn-primary" id="btn-users">获取所有用户</button>
+        <input class="input" id="input-user-id" type="number" min="1" max="5" value="1" placeholder="用户 ID">
+        <button class="btn btn-primary" id="btn-user">获取单个用户</button>
+      </div>
+      <div style="margin-top:12px">
+        <input class="input" id="input-search" placeholder="搜索关键词 (如 alice)">
+        <button class="btn btn-primary" id="btn-search">搜索</button>
+      </div>
+      <div class="cache-visual" id="cache-visual">
+        <span class="cache-dot" id="cache-dot"></span>
+        <span id="cache-label">等待请求 ...</span>
+      </div>
+      <div class="result-box" id="cache-result">{ }</div>
+      <div class="history-list" id="cache-history"></div>
+    </div>
+    <div class="card">
+      <h3>缓存管理</h3>
+      <div class="flex-row">
+        <button class="btn btn-outline btn-sm" onclick="fetchCacheKeys()">查看当前缓存</button>
+        <button class="btn btn-danger btn-sm" onclick="clearAllCache()">清除所有缓存</button>
+      </div>
+      <div class="result-box" id="cache-keys-result" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- 限流演示 -->
+  <div class="tab-content" id="tab-ratelimit">
+    <div class="card">
+      <h3>慢接口限流测试</h3>
+      <p style="margin-bottom:10px">接口 <code>/slow</code> 限制 <strong>5 次 / 分钟</strong>。快速点击下方按钮，观察限流触发。</p>
+      <button class="btn btn-danger" id="btn-slow">请求慢接口</button>
+      <div class="rate-status" id="rate-status">等待请求 ...</div>
+      <div class="result-box" id="slow-result">{ }</div>
+    </div>
+    <div class="card">
+      <h3>请求时序</h3>
+      <div class="history-list" id="slow-history"></div>
+    </div>
+  </div>
+
+  <!-- 统计 -->
+  <div class="tab-content" id="tab-stats">
+    <div class="card">
+      <h3>系统统计</h3>
+      <button class="btn btn-primary" onclick="fetchStats()">刷新统计</button>
+      <div class="stat-grid" id="stats-grid" style="margin-top:16px">
+        <div class="stat-item"><div class="num" id="stat-total-access">0</div><div class="label">总访问次数</div></div>
+        <div class="stat-item"><div class="num" id="stat-cache-rate">0%</div><div class="label">缓存命中率</div></div>
+        <div class="stat-item"><div class="num" id="stat-rate-hits">0</div><div class="label">限流触发次数</div></div>
+        <div class="stat-item"><div class="num" id="stat-users">0</div><div class="label">用户总数</div></div>
+        <div class="stat-item"><div class="num" id="stat-avg-time">0ms</div><div class="label">平均响应时间</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>缓存命中率</h3>
+      <div class="progress-bar" style="height:20px"><div class="fill" id="cache-rate-bar" style="width:0%"></div></div>
+      <p style="margin-top:6px;font-size:13px;color:#666">命中率: <span id="cache-rate-text">0%</span></p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.querySelectorAll('.tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+async function apiCall(url) {
+  const resp = await fetch(url);
+  const text = await resp.text();
+  let body;
+  try { body = JSON.parse(text); } catch { body = {}; }
+  const cacheStatus = body.from_cache ? 'HIT' : (resp.headers.get('X-Cache') || (body.data ? 'MISS' : '-'));
+  return { status: resp.status, cacheHeader: cacheStatus, text };
+}
+
+function formatJSON(text) {
+  try { return JSON.stringify(JSON.parse(text), null, 2); } catch { return text; }
+}
+
+// ─── Cache Demo ──
+let cacheHistory = [];
+
+function updateCacheVisual(h) {
+  const dot = document.getElementById('cache-dot');
+  const label = document.getElementById('cache-label');
+  if (h === 'HIT') {
+    dot.className = 'cache-dot hit';
+    label.textContent = ' 缓存命中 (HIT) - 数据来自缓存';
+    label.style.color = '#1e7e34';
+  } else if (h === 'MISS') {
+    dot.className = 'cache-dot miss';
+    label.textContent = ' 缓存未命中 (MISS) - 数据来自数据库';
+    label.style.color = '#c5221f';
+  } else {
+    dot.className = 'cache-dot';
+    label.textContent = '等待请求 ...';
+    label.style.color = '#666';
+  }
+}
+
+function addCacheHistory(type, status) {
+  cacheHistory.unshift({ type, status, time: new Date().toLocaleTimeString() });
+  if (cacheHistory.length > 20) cacheHistory.pop();
+  document.getElementById('cache-history').innerHTML = cacheHistory.map(h =>
+    `<span class="history-item ${h.status.toLowerCase()}">${h.type} . ${h.status} . ${h.time}</span>`
+  ).join('');
+}
+
+async function fetchUsers() {
+  const { status, cacheHeader, text } = await apiCall('/users');
+  document.getElementById('cache-result').textContent = formatJSON(text);
+  updateCacheVisual(cacheHeader);
+  addCacheHistory('/users', cacheHeader || (status === 200 ? 'OK' : status));
+}
+
+async function fetchUser(id) {
+  const { status, cacheHeader, text } = await apiCall(`/user/${id}`);
+  document.getElementById('cache-result').textContent = formatJSON(text);
+  updateCacheVisual(cacheHeader);
+  addCacheHistory(`/user/${id}`, cacheHeader || (status === 200 ? 'OK' : status));
+}
+
+async function fetchSearch(q) {
+  const { status, cacheHeader, text } = await apiCall(`/search?q=${encodeURIComponent(q)}`);
+  document.getElementById('cache-result').textContent = formatJSON(text);
+  updateCacheVisual(cacheHeader);
+  addCacheHistory(`/search?q=${q}`, cacheHeader || (status === 200 ? 'OK' : status));
+}
+
+document.getElementById('btn-users').addEventListener('click', fetchUsers);
+document.getElementById('btn-user').addEventListener('click', () => fetchUser(document.getElementById('input-user-id').value));
+document.getElementById('btn-search').addEventListener('click', () => fetchSearch(document.getElementById('input-search').value));
+
+async function fetchCacheKeys() {
+  const { text } = await apiCall('/current-cache');
+  document.getElementById('cache-keys-result').textContent = formatJSON(text);
+}
+
+async function clearAllCache() {
+  const { text } = await apiCall('/clear-cache');
+  document.getElementById('cache-keys-result').textContent = formatJSON(text);
+  document.getElementById('cache-history').innerHTML = '';
+  cacheHistory = [];
+}
+
+// ─── Rate Limit ──
+let slowHistory = [];
+let slowCount = 0;
+
+async function fetchSlow() {
+  slowCount++;
+  const statusEl = document.getElementById('rate-status');
+  const resultEl = document.getElementById('slow-result');
+  const btn = document.getElementById('btn-slow');
+  btn.disabled = true;
+  btn.textContent = ' 请求中 ...';
+  const start = Date.now();
+  const { status, text } = await apiCall('/slow');
+  const elapsed = Date.now() - start;
+  if (status === 429) {
+    statusEl.className = 'rate-status rate-block';
+    statusEl.textContent = ` 第 ${slowCount} 次请求 - 限流触发！429 (${elapsed}ms)`;
+  } else {
+    statusEl.className = 'rate-status rate-ok';
+    statusEl.textContent = ` 第 ${slowCount} 次请求 - 成功 (${elapsed}ms)`;
+  }
+  resultEl.textContent = formatJSON(text);
+  slowHistory.unshift({ n: slowCount, status, time: new Date().toLocaleTimeString() });
+  if (slowHistory.length > 20) slowHistory.pop();
+  document.getElementById('slow-history').innerHTML = slowHistory.map(h =>
+    `<span class="history-item ${h.status === 429 ? 'miss' : 'hit'}">#${h.n} ${h.status} . ${h.time}</span>`
+  ).join('');
+  btn.disabled = false;
+  btn.textContent = '请求慢接口';
+}
+
+document.getElementById('btn-slow').addEventListener('click', fetchSlow);
+
+// ─── Database ──
+async function reinitDb() {
+  const el = document.getElementById('db-result');
+  el.textContent = ' 正在重新初始化数据库 ...';
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('请求超时')), 30000));
+  try {
+    const { status, text } = await Promise.race([apiCall('/reinit-db'), timeout]);
+    el.textContent = `[${status}] ${formatJSON(text)}`;
+    if (status === 200) setTimeout(fetchStats, 500);
+  } catch (e) {
+    el.textContent = ' 请求失败: ' + e.message;
+  }
+}
+
+// ─── Stats ──
+async function fetchStats() {
+  const { text } = await apiCall('/stats');
+  try {
+    const d = JSON.parse(text);
+    const s = d.data.statistics || {};
+    document.getElementById('stat-total-access').textContent = s.total_access ?? 0;
+    document.getElementById('stat-cache-rate').textContent = (s.cache_hit_rate ?? 0) + '%';
+    document.getElementById('stat-rate-hits').textContent = s.rate_limit_hits ?? 0;
+    document.getElementById('stat-users').textContent = s.user_count ?? 0;
+    document.getElementById('stat-avg-time').textContent = (s.avg_response_time ?? 0) + 'ms';
+    const rate = Math.min(s.cache_hit_rate ?? 0, 100);
+    document.getElementById('cache-rate-bar').style.width = rate + '%';
+    document.getElementById('cache-rate-text').textContent = rate + '%';
+  } catch {}
+}
+
+document.querySelector('[data-tab="stats"]').addEventListener('click', fetchStats);
+fetchStats();
+</script>
+</body>
+</html>
