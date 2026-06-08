@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python & HTTP & 模块化 — 新手入门课程</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #a78bfa;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --red: #f87171;
+    --orange: #fb923c;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.8;
+    font-size: 15px;
+  }
+  #progress-wrap {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    height: 4px; background: var(--border);
+  }
+  #progress-bar {
+    height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.4s ease;
+  }
+  #timer-bar {
+    position: fixed; top: 4px; right: 20px; z-index: 101;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 0 0 8px 8px; padding: 4px 14px;
+    font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 {
+    font-size: 28px; font-weight: 800; margin: 40px 0 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+  h2 {
+    font-size: 20px; font-weight: 700; margin: 36px 0 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2 .badge {
+    font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 20px;
+    -webkit-text-fill-color: #fff;
+  }
+  .badge-blue { background: var(--accent); }
+  .badge-purple { background: var(--accent2); }
+  .badge-green { background: var(--green); color: #000 !important; -webkit-text-fill-color: #000 !important; }
+  .badge-orange { background: var(--orange); }
+  h3 {
+    font-size: 16px; font-weight: 600; margin: 24px 0 10px; color: var(--accent);
+  }
+  p { margin: 10px 0; color: var(--muted); }
+  p strong { color: var(--text); font-weight: 600; }
+  .highlight { color: var(--accent); }
+  .highlight2 { color: var(--accent2); }
+  .highlight-green { color: var(--green); }
+  .highlight-red { color: var(--red); }
+  .highlight-yellow { color: var(--yellow); }
+  pre {
+    background: #0b1120; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 20px; overflow-x: auto; font-size: 13px; line-height: 1.7;
+    margin: 12px 0; position: relative;
+  }
+  pre .comment { color: #64748b; font-style: italic; }
+  pre .kw { color: var(--accent2); }
+  pre .fn { color: var(--yellow); }
+  pre .str { color: var(--green); }
+  pre .num { color: var(--orange); }
+  pre .built { color: var(--accent); }
+  pre .op { color: var(--red); }
+  pre .dec { color: #f472b6; }  /* decorator pink */
+  code { font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; margin: 16px 0;
+  }
+  .card-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0;
+  }
+  @media (max-width: 640px) { .card-grid { grid-template-columns: 1fr; } }
+  .stat-card {
+    background: #0b1120; border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 16px; text-align: center;
+  }
+  .stat-card .num { font-size: 26px; font-weight: 800; display: block; }
+  .stat-card .label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .stat-card.green .num { color: var(--green); }
+  .stat-card.blue .num { color: var(--accent); }
+  .stat-card.purple .num { color: var(--accent2); }
+  .stat-card.orange .num { color: var(--orange); }
+  .diagram {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 16px; flex-wrap: wrap;
+  }
+  .diagram .box {
+    background: var(--card); border: 2px solid var(--border); border-radius: 8px;
+    padding: 10px 16px; font-size: 13px; font-weight: 600; text-align: center;
+    min-width: 70px;
+  }
+  .diagram .box.client { border-color: var(--accent); color: var(--accent); }
+  .diagram .box.server { border-color: var(--green); color: var(--green); }
+  .diagram .box.db { border-color: var(--orange); color: var(--orange); }
+  .diagram .box.cache { border-color: var(--accent2); color: var(--accent2); }
+  .diagram .box.layer { border-color: var(--yellow); color: var(--yellow); }
+  .diagram .arrow { color: var(--muted); font-size: 20px; }
+  .btn {
+    display: inline-block; padding: 8px 20px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--card); color: var(--text);
+    cursor: pointer; font-size: 13px; transition: all 0.2s; margin: 4px;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+  .btn-primary:hover { background: #7dd3fc; }
+  .btn-sm { padding: 4px 12px; font-size: 12px; }
+  .btn-green { background: var(--green); color: #000; border-color: var(--green); }
+  .btn-green:hover { background: #86efac; }
+  .output-box {
+    background: #0b1120; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px 18px; margin: 10px 0; min-height: 40px;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap;
+  }
+  .output-box.success { border-left: 3px solid var(--green); }
+  .output-box.error { border-left: 3px solid var(--red); }
+  .output-box.info { border-left: 3px solid var(--accent); }
+  .quiz-option {
+    display: block; width: 100%; text-align: left; padding: 12px 16px;
+    margin: 6px 0; background: #0b1120; border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer; color: var(--text); font-size: 14px;
+    transition: all 0.2s;
+  }
+  .quiz-option:hover { border-color: var(--accent); }
+  .quiz-option.correct { border-color: var(--green); background: rgba(74,222,128,0.1); }
+  .quiz-option.wrong { border-color: var(--red); background: rgba(248,113,113,0.1); }
+  .quiz-result { margin-top: 8px; font-weight: 600; display: none; }
+  .quiz-result.show { display: block; }
+  .tabs { display: flex; gap: 4px; margin: 16px 0 0; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 8px 18px; border-radius: 8px 8px 0 0; cursor: pointer;
+    background: transparent; color: var(--muted); border: 1px solid transparent;
+    border-bottom: none; font-size: 13px; transition: all 0.2s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { background: var(--card); color: var(--accent); border-color: var(--border); }
+  .tab-content { display: none; background: var(--card); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 20px; }
+  .tab-content.active { display: block; }
+  .tip {
+    background: rgba(56,189,248,0.1); border-left: 3px solid var(--accent);
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 14px;
+  }
+  .warning {
+    background: rgba(251,191,36,0.1); border-left: 3px solid var(--yellow);
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; font-size: 14px;
+  }
+  table {
+    width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px;
+  }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { color: var(--accent); font-weight: 600; background: #0b1120; }
+  .tag {
+    display: inline-block; padding: 1px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; margin: 0 2px;
+  }
+  .tag-get { background: rgba(74,222,128,0.2); color: var(--green); }
+  .tag-post { background: rgba(251,191,36,0.2); color: var(--yellow); }
+  .tag-delete { background: rgba(248,113,113,0.2); color: var(--red); }
+  .tag-put { background: rgba(56,189,248,0.2); color: var(--accent); }
+  .hidden { display: none; }
+  .flex-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .nav-btns { position: sticky; bottom: 0; background: var(--bg); padding: 16px 0; border-top: 1px solid var(--border); margin-top: 40px; display: flex; justify-content: space-between; }
+  .arch-box {
+    display: flex; align-items: center; gap: 6px; padding: 10px 14px;
+    border-radius: 8px; margin: 4px 0; font-size: 13px;
+  }
+  .arch-box .icon { font-size: 18px; min-width: 28px; }
+  .arch-box .label { font-weight: 600; min-width: 80px; }
+  .arch-box .desc { color: var(--muted); font-size: 12px; }
+  .file-tree {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 2;
+    padding: 12px 16px;
+  }
+  .file-tree .folder { color: var(--yellow); }
+  .file-tree .file { color: var(--muted); }
+  .file-tree .active { color: var(--accent); font-weight: 600; }
+  .flow-arrow { color: var(--muted); font-size: 12px; text-align: center; padding: 2px 0; }
+</style>
+</head>
+<body>
+
+<div id="progress-wrap"><div id="progress-bar"></div></div>
+<div id="timer-bar">&#9201; 00:00 / 45:00</div>
+
+<div class="container">
+
+<h1>&#128218; Python + HTTP + 模块化 &mdash; 新手入门</h1>
+<p class="subtitle">45 分钟互动课程 &middot; 基于本项目实战代码 &middot; 点击运行 &middot; 边学边练</p>
+
+<div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+  <div style="display:flex;gap:20px;flex-wrap:wrap;">
+    <div><span class="highlight" style="font-size:24px;font-weight:800;">4</span><br><span style="font-size:12px;color:var(--muted)">大章节</span></div>
+    <div><span class="highlight2" style="font-size:24px;font-weight:800;">6</span><br><span style="font-size:12px;color:var(--muted)">个代码演示</span></div>
+    <div><span class="highlight-green" style="font-size:24px;font-weight:800;">10</span><br><span style="font-size:12px;color:var(--muted)">道随堂测验</span></div>
+  </div>
+  <div style="margin-left:auto;font-size:13px;color:var(--muted);">
+    &#128161; 打开浏览器控制台 <kbd>F12</kbd> &#8594; Console 跟着敲
+  </div>
+</div>
+
+<!-- NAV TABS -->
+<div class="tabs" id="section-tabs">
+  <div class="tab active" data-section="1">&#128196; Python 基础<br><small>变量/函数 (12')</small></div>
+  <div class="tab" data-section="2">&#127760; HTTP + JSON<br><small>协议/格式 (13')</small></div>
+  <div class="tab" data-section="3">&#128737; 装饰器<br><small>@ 语法 (10')</small></div>
+  <div class="tab" data-section="4">&#128736; 模块化 + 测验<br><small>架构/Quiz (10')</small></div>
+</div>
+
+<!-- ========================================================= -->
+<!-- PART 1: PYTHON BASICS -->
+<!-- ========================================================= -->
+<div id="section-1" class="tab-content active">
+
+<h2><span class="badge badge-blue">Part 1</span> Python 基础 &mdash; 12 分钟</h2>
+
+<div class="tip"><strong>&#128161; 目标：</strong>学会本项目用到的最核心 Python 知识：变量、列表、字典、函数、import。</div>
+
+<h3>1.1 &nbsp;变量与类型</h3>
+<p>Python 的变量不需要声明类型，直接 <code>变量名 = 值</code> 即可。</p>
+
+<pre><span class="comment"># 项目中常见的变量类型</span>
+name = <span class="str">"Flask Cache Demo"</span>    <span class="comment"># 字符串 str</span>
+port = <span class="num">5000</span>                    <span class="comment"># 整数 int</span>
+debug = <span class="built">True</span>                   <span class="comment"># 布尔值 bool（True / False）</span>
+price = <span class="num">3.14</span>                   <span class="comment"># 浮点数 float</span>
+
+<span class="built">print</span>(<span class="str">f"项目：{name}，端口：{port}"</span>)  <span class="comment"># f-string 字符串模板</span></pre>
+
+<div class="card">
+  <div class="flex-row"><strong>&#9654; 运行演示</strong> <button class="btn btn-sm btn-primary" onclick="runCode('py1')">点击运行</button></div>
+  <div id="py1" class="output-box info">点击按钮查看输出</div>
+</div>
+
+<h3>1.2 &nbsp;列表与字典（项目中随处可见）</h3>
+
+<pre><span class="comment"># 列表 list —— 有序集合（项目中 /users 返回的就是列表）</span>
+users = [
+    {<span class="str">"id"</span>: <span class="num">1</span>, <span class="str">"name"</span>: <span class="str">"小明"</span>},
+    {<span class="str">"id"</span>: <span class="num">2</span>, <span class="str">"name"</span>: <span class="str">"小红"</span>}
+]
+<span class="built">print</span>(users[<span class="num">0</span>][<span class="str">"name"</span>])           <span class="comment"># 取第一个用户的姓名</span>
+
+<span class="comment"># 字典 dict —— 键值对（项目中 API 响应就是字典）</span>
+response = {
+    <span class="str">"code"</span>: <span class="num">200</span>,
+    <span class="str">"message"</span>: <span class="str">"success"</span>,
+    <span class="str">"data"</span>: users
+}
+<span class="built">print</span>(response[<span class="str">"message"</span>])        <span class="comment"># 取值</span>
+response[<span class="str">"timestamp"</span>] = <span class="str">"2026-01-01 12:00:00"</span>  <span class="comment"># 新增键</span></pre>
+
+<div class="card">
+  <div class="flex-row"><strong>&#9654; 运行演示</strong> <button class="btn btn-sm btn-primary" onclick="runCode('py2')">点击运行</button></div>
+  <div id="py2" class="output-box info">点击按钮查看输出</div>
+</div>
+
+<h3>1.3 &nbsp;函数 —— 把逻辑包起来反复用</h3>
+
+<pre><span class="comment"># 项目中的函数：def 函数名(参数):</span>
+<span class="kw">def</span> <span class="fn">get_user_info</span>(user_id, name=<span class="str">"匿名"</span>):
+    <span class="str">"""根据 ID 返回用户信息"""</span>
+    <span class="kw">return</span> {<span class="str">"id"</span>: user_id, <span class="str">"name"</span>: name}
+
+<span class="comment"># 调用函数</span>
+user = <span class="fn">get_user_info</span>(<span class="num">1</span>, <span class="str">"小明"</span>)
+<span class="built">print</span>(user)
+
+<span class="comment"># 项目中实际例子：app.py 里的 create_app() 函数</span>
+<span class="comment"># def create_app():</span>
+<span class="comment">#     app = Flask(__name__)</span>
+<span class="comment">#     ...</span>
+<span class="comment">#     return app</span></pre>
+
+<div class="card">
+  <div class="flex-row"><strong>&#9654; 运行演示</strong> <button class="btn btn-sm btn-primary" onclick="runCode('py3')">点击运行</button></div>
+  <div id="py3" class="output-box info">点击按钮查看输出</div>
+</div>
+
+<h3>1.4 &nbsp;import 导入机制</h3>
+<p>通过 <code>import</code> 使用其他文件的功能，这是模块化的基础。</p>
+
+<pre><span class="comment"># 三种导入方式（项目中都用到了）</span>
+
+<span class="comment"># 方式1：import 模块</span>
+<span class="kw">import</span> json
+json.dumps({<span class="str">"key"</span>: <span class="str">"value"</span>})
+
+<span class="comment"># 方式2：from 模块 import 具体内容</span>
+<span class="kw">from</span> flask <span class="kw">import</span> Flask, jsonify
+
+<span class="comment"># 方式3：from 包.模块 import</span>
+<span class="kw">from</span> database.connection <span class="kw">import</span> Database
+<span class="comment"># 对应文件：database/connection.py</span></pre>
+
+<div class="tip"><strong>&#128161; 项目对照：</strong><code>app.py</code> 里用 <code>from api import register_api_blueprints</code> 导入路由注册函数；<code>api/users.py</code> 里用 <code>from utils.cache_tools import cache_response</code> 导入缓存装饰器。</div>
+
+</div><!-- /part1 -->
+
+
+<!-- ========================================================= -->
+<!-- PART 2: HTTP + JSON -->
+<!-- ========================================================= -->
+<div id="section-2" class="tab-content">
+
+<h2><span class="badge badge-purple">Part 2</span> HTTP 协议 + JSON 格式 &mdash; 13 分钟</h2>
+
+<div class="tip"><strong>&#128161; 目标：</strong>理解浏览器-服务器怎么对话，以及本项目 API 返回的 JSON 数据长什么样。</div>
+
+<h3>2.1 &nbsp;HTTP 请求-响应模型</h3>
+<p>浏览器（客户端）发请求 &#8594; 服务器处理 &#8594; 返回响应。</p>
+
+<div class="diagram">
+  <div class="box client">&#127760; 浏览器</div>
+  <div class="arrow">&#10140;</div>
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:12px;">
+    <span class="tag tag-get">GET</span> /users
+  </div>
+  <div class="arrow">&#10140;</div>
+  <div class="box server">Flask</div>
+  <div class="arrow">&#10140;</div>
+  <div style="background:var(--card);border:1px solid var(--green);border-radius:8px;padding:8px 16px;font-size:12px;">
+    <span class="highlight-green">200 OK</span><br>JSON 数据
+  </div>
+  <div class="arrow">&#10140;</div>
+  <div class="box client">&#127760; 浏览器</div>
+</div>
+
+<h3>2.2 &nbsp;HTTP 方法</h3>
+<table>
+  <tr><th>方法</th><th>含义</th><th>本项目例子</th></tr>
+  <tr><td><span class="tag tag-get">GET</span></td><td>获取数据</td><td><code>/users</code> 获取用户列表、<code>/stats</code> 获取统计</td></tr>
+  <tr><td><span class="tag tag-post">POST</span></td><td>提交/创建</td><td>（预留）</td></tr>
+  <tr><td><span class="tag tag-put">PUT</span></td><td>更新</td><td>（预留）</td></tr>
+  <tr><td><span class="tag tag-delete">DELETE</span></td><td>删除</td><td>（预留）</td></tr>
+</table>
+
+<h3>2.3 &nbsp;HTTP 状态码</h3>
+<div class="card-grid">
+  <div class="stat-card green"><span class="num">200</span><span class="label">OK 成功</span></div>
+  <div class="stat-card orange"><span class="num">301</span><span class="label">永久重定向</span></div>
+  <div class="stat-card" style="border-color:var(--red);"><span class="num" style="color:var(--red);">404</span><span class="label">Not Found</span></div>
+  <div class="stat-card" style="border-color:var(--orange);"><span class="num" style="color:var(--orange);">429</span><span class="label">Too Many Requests<br>（本项目限流演示）</span></div>
+  <div class="stat-card" style="border-color:var(--red);"><span class="num" style="color:var(--red);">500</span><span class="label">服务器内部错误</span></div>
+</div>
+
+<div class="card">
+  <div class="flex-row">
+    <strong>&#9654; 模拟状态码响应</strong>
+    <button class="btn btn-sm btn-green" onclick="mockHttp('200')">200 成功</button>
+    <button class="btn btn-sm" onclick="mockHttp('404')">404 找不到</button>
+    <button class="btn btn-sm" onclick="mockHttp('429')">429 限流</button>
+    <button class="btn btn-sm" onclick="mockHttp('500')">500 报错</button>
+  </div>
+  <div id="mock-output" class="output-box info">点击按钮查看 HTTP 响应</div>
+</div>
+
+<h3>2.4 &nbsp;JSON 格式详解</h3>
+<p><strong>JSON</strong>（JavaScript Object Notation）是 API 最常用的数据交换格式。结构就是 Python 的 <strong>字典 + 列表</strong>。</p>
+
+<div class="card-grid">
+  <div>
+    <div class="stat-card blue"><span class="num">{ }</span><span class="label">对象 = Python 字典</span></div>
+    <div class="stat-card green"><span class="num">[ ]</span><span class="label">数组 = Python 列表</span></div>
+  </div>
+  <div>
+    <div class="stat-card purple"><span class="num">" "</span><span class="label">字符串必须双引号</span></div>
+    <div class="stat-card orange"><span class="num">true/false</span><span class="label">注意小写（Python 是 True）</span></div>
+  </div>
+</div>
+
+<pre><span class="comment"># Python 字典 → JSON 字符串（项目中用 jsonify 自动转换）</span>
+<span class="kw">import</span> json
+
+data = {
+    <span class="str">"code"</span>: <span class="num">200</span>,
+    <span class="str">"message"</span>: <span class="str">"success"</span>,
+    <span class="str">"data"</span>: [
+        {<span class="str">"id"</span>: <span class="num">1</span>, <span class="str">"name"</span>: <span class="str">"小明"</span>},
+        {<span class="str">"id"</span>: <span class="num">2</span>, <span class="str">"name"</span>: <span class="str">"小红"</span>}
+    ]
+}
+
+json_str = json.dumps(data, ensure_ascii=<span class="built">False</span>, indent=<span class="num">2</span>)
+<span class="built">print</span>(json_str)  <span class="comment"># 输出格式化的 JSON</span>
+
+<span class="comment"># 反过来：JSON 字符串 → Python 字典</span>
+parsed = json.loads(json_str)
+<span class="built">print</span>(parsed[<span class="str">"message"</span>])  <span class="comment"># "success"</span></pre>
+
+<div class="card">
+  <div class="flex-row">
+    <strong>&#9654; 运行演示</strong> <button class="btn btn-sm btn-primary" onclick="runCode('json1')">点击运行</button>
+    <button class="btn btn-sm" onclick="runCode('json2')">对比：不带 indent</button>
+  </div>
+  <div id="json1" class="output-box info">点击按钮查看输出</div>
+  <div id="json2" class="output-box info hidden">点击按钮查看输出</div>
+</div>
+
+<h3>2.5 &nbsp;本项目 API 响应格式</h3>
+<p>所有接口统一使用 <code>api_response()</code> 函数（在 <code>utils/response.py</code> 中）：</p>
+
+<pre><span class="comment"># utils/response.py</span>
+<span class="kw">from</span> flask <span class="kw">import</span> jsonify
+
+<span class="kw">def</span> <span class="fn">api_response</span>(data=<span class="built">None</span>, message=<span class="str">"success"</span>, code=<span class="num">200</span>):
+    <span class="kw">return</span> jsonify({
+        <span class="str">"code"</span>: code,
+        <span class="str">"message"</span>: message,
+        <span class="str">"data"</span>: data
+    })
+
+<span class="comment"># 调用效果：api_response(users) 返回：</span>
+<span class="comment"># {</span>
+<span class="comment">#   "code": 200,</span>
+<span class="comment">#   "message": "success",</span>
+<span class="comment">#   "data": [...]</span>
+<span class="comment"># }</span></pre>
+
+<div class="card">
+  <div class="flex-row">
+    <strong>&#9654; 模拟项目 API 响应</strong>
+    <button class="btn btn-sm btn-primary" onclick="mockApi()">GET /users</button>
+  </div>
+  <div id="mock-api-output" class="output-box info">点击查看真实格式的 API 响应</div>
+</div>
+
+</div><!-- /part2 -->
+
+
+<!-- ========================================================= -->
+<!-- PART 3: DECORATORS -->
+<!-- ========================================================= -->
+<div id="section-3" class="tab-content">
+
+<h2><span class="badge badge-orange">Part 3</span> 装饰器 &mdash; Python 的 @ 语法 &mdash; 10 分钟</h2>
+
+<div class="tip"><strong>&#128161; 目标：</strong>理解 <code>@xxx</code> 是什么、怎么用。本项目大量使用了装饰器：<code>@app.route()</code>、<code>@cache_response</code>、<code>@limiter.limit()</code>、<code>@measure_time</code>。</div>
+
+<h3>3.1 &nbsp;装饰器本质："函数套函数"</h3>
+<p>装饰器就是一个<strong>函数</strong>，它接收一个函数作为参数，返回一个新函数。用 <code>@</code> 语法糖简化写法。</p>
+
+<pre><span class="comment"># 装饰器原理：</span>
+<span class="comment"># 普通写法：</span>
+<span class="kw">def</span> <span class="fn">say_hello</span>():
+    <span class="built">print</span>(<span class="str">"你好！"</span>)
+
+<span class="comment"># 想加日志功能，但不改原函数</span>
+<span class="kw">def</span> <span class="fn">log_wrapper</span>(func):
+    <span class="kw">def</span> <span class="fn">wrapper</span>():
+        <span class="built">print</span>(<span class="str">"[日志] 调用前"</span>)
+        func()                    <span class="comment"># 调用原函数</span>
+        <span class="built">print</span>(<span class="str">"[日志] 调用后"</span>)
+    <span class="kw">return</span> wrapper
+
+say_hello = <span class="fn">log_wrapper</span>(say_hello)    <span class="comment"># 手动包装</span>
+say_hello()
+
+<span class="comment"># 输出：</span>
+<span class="comment"># [日志] 调用前</span>
+<span class="comment"># 你好！</span>
+<span class="comment"># [日志] 调用后</span></pre>
+
+<div class="card">
+  <div class="flex-row"><strong>&#9654; 运行演示</strong> <button class="btn btn-sm btn-primary" onclick="runCode('dec1')">点击运行</button></div>
+  <div id="dec1" class="output-box info">点击查看装饰器原理</div>
+</div>
+
+<h3>3.2 &nbsp;@ 语法糖</h3>
+<p>上面的 <code>say_hello = log_wrapper(say_hello)</code> 等价于：</p>
+
+<pre><span class="dec">@log_wrapper</span>                    <span class="comment"># 相当于 say_hello = log_wrapper(say_hello)</span>
+<span class="kw">def</span> <span class="fn">say_hello</span>():
+    <span class="built">print</span>(<span class="str">"你好！"</span>)
+
+say_hello()                      <span class="comment"># 自动就有日志功能了</span></pre>
+
+<h3>3.3 &nbsp;项目实战：@app.route()</h3>
+<p>Flask 最常用的装饰器，把函数注册为路由：</p>
+
+<pre><span class="comment"># api/users.py —— 项目实际代码</span>
+users_bp = Blueprint(<span class="str">'users'</span>, __name__)
+
+<span class="dec">@users_bp.route</span>(<span class="str">"/users"</span>)            <span class="comment"># GET /users 时触发</span>
+<span class="kw">def</span> <span class="fn">get_users</span>():
+    db = current_app.extensions[<span class="str">'db'</span>]
+    users = db.get_all_users()
+    <span class="kw">return</span> api_response(users)
+
+<span class="comment"># @users_bp.route("/users") 做的事：</span>
+<span class="comment"># 把 get_users 函数注册到 Flask 路由表中</span>
+<span class="comment"># 当浏览器访问 /users 时，Flask 自动调用 get_users()</span></pre>
+
+<h3>3.4 &nbsp;项目实战：@cache_response</h3>
+<p>本项目核心装饰器——缓存 API 结果：</p>
+
+<pre><span class="comment"># utils/cache_tools.py（简化版）</span>
+<span class="kw">def</span> <span class="fn">cache_response</span>(timeout=<span class="num">60</span>):
+    <span class="kw">def</span> <span class="fn">decorator</span>(f):                 <span class="comment"># 接收被装饰的函数</span>
+        <span class="kw">def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+            key = make_cache_key(f.__name__)  <span class="comment"># 生成缓存键</span>
+            cached = cache.get(key)           <span class="comment"># 查缓存</span>
+            <span class="kw">if</span> cached:                     <span class="comment"># 命中 → 直接返回</span>
+                cached[<span class="str">"from_cache"</span>] = <span class="built">True</span>
+                <span class="kw">return</span> cached
+            result = f(*args, **kwargs)       <span class="comment"># 没命中 → 调原函数</span>
+            result[<span class="str">"from_cache"</span>] = <span class="built">False</span>
+            cache.set(key, result, timeout)    <span class="comment"># 存入缓存</span>
+            <span class="kw">return</span> result
+        <span class="kw">return</span> wrapper
+    <span class="kw">return</span> decorator
+
+<span class="comment"># 使用：</span>
+<span class="dec">@users_bp.route</span>(<span class="str">"/users"</span>)
+<span class="dec">@cache_response</span>(timeout=<span class="num">30</span>)           <span class="comment"># 缓存 30 秒</span>
+<span class="kw">def</span> <span class="fn">get_users</span>():
+    ...</pre>
+
+<div class="card">
+  <div class="flex-row"><strong>&#9654; 模拟 @cache_response 行为</strong> <button class="btn btn-sm btn-primary" onclick="runCode('dec2')">点击运行</button></div>
+  <div id="dec2" class="output-box info">点击查看缓存装饰器效果</div>
+</div>
+
+<h3>3.5 &nbsp;项目实战：@measure_time 和 @limiter.limit()</h3>
+
+<pre><span class="comment"># @measure_time —— 统计接口耗时</span>
+<span class="kw">def</span> <span class="fn">measure_time</span>(f):
+    <span class="kw">def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+        start = time.time()
+        result = f(*args, **kwargs)           <span class="comment"># 执行原函数</span>
+        elapsed = time.time() - start
+        result[<span class="str">"elapsed_ms"</span>] = round(elapsed * <span class="num">1000</span>, <span class="num">2</span>)
+        <span class="kw">return</span> result
+    <span class="kw">return</span> wrapper
+
+<span class="comment"># @limiter.limit("5 per minute") —— 限流</span>
+<span class="comment"># 来自 Flask-Limiter 库：</span>
+<span class="comment"># 同一 IP 每分钟最多访问 5 次，超限返回 429</span>
+
+<span class="comment"># 项目中实际用法（api/users.py）：</span>
+<span class="dec">@users_bp.route</span>(<span class="str">"/slow"</span>)
+<span class="dec">@limiter.limit</span>(<span class="str">"3 per minute"</span>)       <span class="comment"># 每分钟 3 次</span>
+<span class="dec">@measure_time</span>                          <span class="comment"># 统计耗时</span>
+<span class="kw">def</span> <span class="fn">slow_query</span>():
+    time.sleep(<span class="num">2</span>)                      <span class="comment"># 模拟慢查询</span>
+    ...</pre>
+
+<div class="tip"><strong>&#128161; 总结：</strong>装饰器就是在<strong>不修改原函数代码</strong>的前提下，给函数<strong>附加新功能</strong>。项目中的 @cache_response 加缓存、@measure_time 加计时、@limiter.limit 加限流——都是"附加功能"。</div>
+
+</div><!-- /part3 -->
+
+
+<!-- ========================================================= -->
+<!-- PART 4: MODULARIZATION + QUIZ -->
+<!-- ========================================================= -->
+<div id="section-4" class="tab-content">
+
+<h2><span class="badge badge-green">Part 4</span> 项目模块化 + 架构详解 &mdash; 10 分钟</h2>
+
+<div class="tip"><strong>&#128161; 目标：</strong>理解 6 层架构怎么拆、为什么拆、数据怎么流。</div>
+
+<h3>4.1 &nbsp;为什么拆成多文件？</h3>
+<div class="card-grid">
+  <div class="stat-card blue"><span class="num">&#128196;</span><span class="label">好维护：改路由不动数据库</span></div>
+  <div class="stat-card green"><span class="num">&#128260;</span><span class="label">好复用：到处 import</span></div>
+  <div class="stat-card purple"><span class="num">&#128295;</span><span class="label">好协作：每人负责一层</span></div>
+  <div class="stat-card orange"><span class="num">&#128270;</span><span class="label">好调试：问题定位更快</span></div>
+</div>
+
+<h3>4.2 &nbsp;本项目目录结构</h3>
+<div class="card">
+<div class="file-tree">
+<span class="folder">flask-cache-tutorial/</span>
+&#9500;&#9472; <span class="active">app.py</span>               <span class="comment" style="color:var(--muted);">  # 入口：组装所有层</span>
+&#9500;&#9472; <span class="folder">config/</span>
+&#9474;   &#9492;&#9472; <span class="file">__init__.py</span>       <span class="comment" style="color:var(--muted);">  # 配置：数据库、缓存、限流参数</span>
+&#9500;&#9472; <span class="folder">core/</span>
+&#9474;   &#9492;&#9472; <span class="file">__init__.py</span>       <span class="comment" style="color:var(--muted);">  # 核心：Cache + Limiter 单例</span>
+&#9500;&#9472; <span class="folder">database/</span>
+&#9474;   &#9500;&#9472; <span class="file">__init__.py</span>
+&#9474;   &#9500;&#9472; <span class="file">connection.py</span>    <span class="comment" style="color:var(--muted);">  # 数据库连接、建表、重置</span>
+&#9474;   &#9492;&#9472; <span class="file">queries.py</span>        <span class="comment" style="color:var(--muted);">  # SQL 查询：CRUD、日志、统计</span>
+&#9500;&#9472; <span class="folder">service/</span>
+&#9474;   &#9500;&#9472; <span class="file">__init__.py</span>
+&#9474;   &#9492;&#9472; <span class="file">stats_service.py</span> <span class="comment" style="color:var(--muted);">  # 业务逻辑：组装统计数据</span>
+&#9500;&#9472; <span class="folder">api/</span>
+&#9474;   &#9500;&#9472; <span class="file">__init__.py</span>       <span class="comment" style="color:var(--muted);">  # 注册蓝图</span>
+&#9474;   &#9500;&#9472; <span class="file">system.py</span>        <span class="comment" style="color:var(--muted);">  # 系统路由：/, /stats, /clear-cache</span>
+&#9474;   &#9492;&#9472; <span class="file">users.py</span>          <span class="comment" style="color:var(--muted);">  # 用户路由：/users, /user/&lt;id&gt;, /search, /slow</span>
+&#9500;&#9472; <span class="folder">utils/</span>
+&#9474;   &#9500;&#9472; <span class="file">__init__.py</span>
+&#9474;   &#9500;&#9472; <span class="file">response.py</span>      <span class="comment" style="color:var(--muted);">  # api_response()、fix_json_response()</span>
+&#9474;   &#9492;&#9472; <span class="file">cache_tools.py</span>    <span class="comment" style="color:var(--muted);">  # cache_response、measure_time 装饰器</span>
+&#9492;&#9472; <span class="folder">templates/</span>
+    &#9492;&#9472; <span class="file">index.html</span>        <span class="comment" style="color:var(--muted);">  # 前端仪表盘</span>
+</div>
+</div>
+
+<h3>4.3 &nbsp;6 层架构职责</h3>
+<div style="display:flex;flex-direction:column;gap:4px;padding:8px 0;">
+  <div class="arch-box" style="background:rgba(56,189,248,0.1);border:1px solid var(--accent);">
+    <span class="icon">&#127760;</span><span class="label" style="color:var(--accent);">api/</span><span class="desc">路由层：接收 HTTP 请求、调用 service、返回 JSON 响应</span>
+  </div>
+  <div class="flow-arrow">&#8593; &#8595;</div>
+  <div class="arch-box" style="background:rgba(168,85,247,0.1);border:1px solid var(--accent2);">
+    <span class="icon">&#9881;</span><span class="label" style="color:var(--accent2);">service/</span><span class="desc">业务层：复杂数据处理（如统计信息组装）</span>
+  </div>
+  <div class="flow-arrow">&#8593; &#8595;</div>
+  <div class="arch-box" style="background:rgba(251,146,60,0.1);border:1px solid var(--orange);">
+    <span class="icon">&#128451;</span><span class="label" style="color:var(--orange);">database/</span><span class="desc">数据层：执行 SQL、操作 MySQL 数据库</span>
+  </div>
+  <div class="flow-arrow">&#8593; &#8595;</div>
+  <div class="arch-box" style="background:rgba(74,222,128,0.1);border:1px solid var(--green);">
+    <span class="icon">&#128737;</span><span class="label" style="color:var(--green);">core/</span><span class="desc">核心：Cache + Limiter 单例，全局共享</span>
+  </div>
+  <div class="flow-arrow">&#8593; &#8595;</div>
+  <div class="arch-box" style="background:rgba(148,163,184,0.1);border:1px solid var(--muted);">
+    <span class="icon">&#128295;</span><span class="label" style="color:var(--muted);">utils/</span><span class="desc">工具：通用函数（响应格式、缓存装饰器）</span>
+  </div>
+  <div class="flow-arrow">&#8593; &#8595;</div>
+  <div class="arch-box" style="background:rgba(100,116,139,0.1);border:1px solid var(--border);">
+    <span class="icon">&#128196;</span><span class="label">config/</span><span class="desc">配置：所有可调参数（数据库地址、缓存时间、限流频率）</span>
+  </div>
+</div>
+
+<h3>4.4 &nbsp;数据流：访问 /stats 时各层做了什么</h3>
+<table>
+  <tr><th>顺序</th><th>层</th><th>文件</th><th>代码</th></tr>
+  <tr>
+    <td>1</td><td><span class="highlight">api/</span></td>
+    <td><code>api/system.py</code></td>
+    <td><code>@system_bp.route("/stats")<br>def stats(): return build_stats_response()</code></td>
+  </tr>
+  <tr>
+    <td>2</td><td><span class="highlight2">service/</span></td>
+    <td><code>service/stats_service.py</code></td>
+    <td><code>def build_stats_response():<br>&nbsp;&nbsp;data = db.get_statistics()</code></td>
+  </tr>
+  <tr>
+    <td>3</td><td><span class="highlight-green">database/</span></td>
+    <td><code>database/queries.py</code></td>
+    <td><code>def get_statistics():<br>&nbsp;&nbsp;cursor.execute("SELECT ...")</code></td>
+  </tr>
+  <tr>
+    <td>4</td><td><span class="highlight2">service/</span></td>
+    <td><code>stats_service.py</code></td>
+    <td><code>return {"total_users": ..., "total_requests": ...}</code></td>
+  </tr>
+  <tr>
+    <td>5</td><td><span class="highlight">api/</span></td>
+    <td><code>system.py</code></td>
+    <td><code>return api_response(stats)</code> &#8594; 浏览器收到 JSON</td>
+  </tr>
+</table>
+
+<div class="diagram" style="flex-direction:column;align-items:stretch;gap:2px;">
+  <div class="box client" style="width:100%;border-color:var(--accent);">&#127760; 浏览器 GET /stats</div>
+  <div class="flow-arrow">&#8595;</div>
+  <div class="box layer" style="width:100%;border-color:var(--yellow);font-size:12px;padding:6px;">api/system.py &#8594; service/stats_service.py</div>
+  <div class="flow-arrow">&#8595;</div>
+  <div class="box layer" style="width:100%;border-color:var(--orange);font-size:12px;padding:6px;">database/queries.py &#8594; MySQL</div>
+  <div class="flow-arrow">&#8593; 数据返回 &#8593;</div>
+  <div class="box server" style="width:100%;font-size:12px;padding:6px;">api/system.py &#8594; JSON 响应（200 OK）</div>
+</div>
+
+<div class="tip"><strong>&#128161; 核心原则——关注点分离（Separation of Concerns）：</strong><br>
+每一层只做自己的事，不越界。<br>
+<code>api/</code> 不直接写 SQL，<code>database/</code> 不直接返回 HTTP 响应。<br>
+这样改数据库查询时，路由代码完全不用动。</div>
+
+<h3>4.5 &nbsp;app.py 如何组装一切</h3>
+<pre><span class="comment"># app.py —— 模块化的大本营</span>
+<span class="kw">from</span> flask <span class="kw">import</span> Flask
+<span class="kw">from</span> config <span class="kw">import</span> Config                <span class="comment"># 1. 配置层</span>
+<span class="kw">from</span> core <span class="kw">import</span> cache, limiter          <span class="comment"># 2. 核心层</span>
+<span class="kw">from</span> database.connection <span class="kw">import</span> Database  <span class="comment"># 3. 数据库层</span>
+<span class="kw">from</span> database.queries <span class="kw">import</span> Queries      <span class="comment"># 4. 查询层</span>
+<span class="kw">from</span> api <span class="kw">import</span> register_api_blueprints  <span class="comment"># 5. API 层</span>
+
+<span class="kw">def</span> <span class="fn">create_app</span>():
+    app = Flask(__name__)
+    app.config.from_object(Config)          <span class="comment"># 加载配置</span>
+
+    db = Database()                         <span class="comment"># 连接 MySQL</span>
+    app.extensions[<span class="str">'db'</span>] = Queries(db)      <span class="comment"># 注册查询对象</span>
+
+    cache.init_app(app)                     <span class="comment"># 初始化缓存</span>
+    limiter.init_app(app)                   <span class="comment"># 初始化限流</span>
+
+    register_api_blueprints(app)            <span class="comment"># 注册所有路由</span>
+    <span class="kw">return</span> app
+
+<span class="kw">if</span> __name__ == <span class="str">"__main__"</span>:
+    app = create_app()
+    app.run(debug=<span class="built">True</span>)</pre>
+
+<hr style="border-color:var(--border);margin:24px 0;">
+
+<!-- QUIZ -->
+<h2 style="text-align:center;">&#127942; 随堂测验（10 题）</h2>
+<p style="text-align:center;color:var(--muted);">每题点击选择，自动判断正误。</p>
+
+<div id="quiz-container"></div>
+
+<div class="card" style="text-align:center;">
+  <div id="quiz-score" style="font-size:24px;font-weight:800;color:var(--accent);">0 / 0</div>
+  <div style="font-size:13px;color:var(--muted);">正确题数</div>
+  <button class="btn" onclick="resetQuiz()" style="margin-top:12px;">&#8635; 重新测验</button>
+</div>
+
+</div><!-- /part4 -->
+
+
+<!-- ========== NAV ========== -->
+<div class="nav-btns">
+  <button class="btn" id="prev-btn" onclick="navSection(-1)">&#8592; 上一部分</button>
+  <span id="section-indicator" style="font-size:13px;color:var(--muted);">1 / 4</span>
+  <button class="btn btn-primary" id="next-btn" onclick="navSection(1)">下一部分 &#8594;</button>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// ========== TIMER ==========
+let timerSec = 0;
+setInterval(() => {
+  timerSec++;
+  const m = String(Math.floor(timerSec / 60)).padStart(2, '0');
+  const s = String(timerSec % 60).padStart(2, '0');
+  document.querySelector('#timer-bar').textContent = `\u23f1 ${m}:${s} / 45:00`;
+}, 1000);
+
+// ========== SECTION NAV ==========
+let currentSection = 1;
+function navSection(dir) {
+  const next = currentSection + dir;
+  if (next < 1 || next > 4) return;
+  switchSection(next);
+}
+function switchSection(n) {
+  currentSection = n;
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.getElementById(`section-${n}`).classList.add('active');
+  document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', i === n - 1));
+  document.querySelector('#section-indicator').textContent = `${n} / 4`;
+  document.querySelector('#prev-btn').style.opacity = n === 1 ? '0.4' : '1';
+  document.querySelector('#next-btn').style.opacity = n === 4 ? '0.4' : '1';
+  document.querySelector('#progress-bar').style.width = `${(n / 4) * 100}%`;
+}
+document.querySelectorAll('.tab').forEach((el, i) => el.addEventListener('click', () => switchSection(i + 1)));
+
+// ========== PYTHON CODE RUNNER ==========
+const codeSnippets = {
+  py1: `name = "Flask Cache Demo"\nport = 5000\ndebug = True\nprice = 3.14\nprint(f"项目：{name}，端口：{port}")\nprint(f"调试模式：{debug}，版本：{price}")`,
+  py2: `users = [\n    {"id": 1, "name": "小明"},\n    {"id": 2, "name": "小红"}\n]\nprint("第一个用户：", users[0]["name"])\n\nresponse = {\n    "code": 200,\n    "message": "success",\n    "data": users\n}\nprint("响应消息：", response["message"])\nresponse["timestamp"] = "2026-01-01 12:00:00"\nprint("完整响应：", response)`,
+  py3: `def get_user_info(user_id, name="匿名"):\n    """根据 ID 返回用户信息"""\n    return {"id": user_id, "name": name}\n\nuser = get_user_info(1, "小明")\nprint("用户信息：", user)\n\n# 默认参数演示\nanonymous = get_user_info(99)\nprint("匿名用户：", anonymous)`,
+  json1: `import json\n\ndata = {\n    "code": 200,\n    "message": "success",\n    "data": [\n        {"id": 1, "name": "小明"},\n        {"id": 2, "name": "小红"}\n    ]\n}\n\njson_str = json.dumps(data, ensure_ascii=False, indent=2)\nprint(json_str)\n\n# 再解析回来\nparsed = json.loads(json_str)\nprint("\\n消息：", parsed["message"])`,
+  json2: `import json\ndata = {"code":200,"message":"success","data":[{"id":1,"name":"小明"}]}\nprint(json.dumps(data, ensure_ascii=False))`,
+  dec1: `def log_wrapper(func):\n    def wrapper():\n        print("[日志] 函数开始调用")\n        func()\n        print("[日志] 函数调用结束")\n    return wrapper\n\ndef say_hello():\n    print("你好！")\n\n# 手动包装\nsay_hello = log_wrapper(say_hello)\nsay_hello()`,
+  dec2: `# 模拟 cache_response 行为\ncache = {}  # 模拟缓存\n\ndef cache_response(timeout=10):\n    def decorator(f):\n        def wrapper(*args, **kwargs):\n            key = f.__name__\n            if key in cache:\n                print(f"[缓存命中] key={key}")\n                return cache[key] + " (from_cache=True)"\n            print(f"[缓存未命中] 执行原函数 key={key}")\n            result = f(*args, **kwargs)\n            cache[key] = result\n            print(f"[已缓存] 有效期 {timeout} 秒")\n            return result + " (from_cache=False)"\n        return wrapper\n    return decorator\n\n@cache_response(timeout=30)\ndef get_users():\n    return "用户列表：[小明, 小红, 小刚]"\n\n# 第一次调用\nprint("第一次调用：")\nprint(get_users())\nprint()\n# 第二次调用（命中缓存）\nprint("第二次调用：")\nprint(get_users())`
+};
+
+function runCode(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const code = codeSnippets[id];
+  if (!code) { el.textContent = '无代码'; return; }
+  el.className = 'output-box info';
+  el.innerHTML = '<span style="color:var(--muted)">> 运行中...</span>';
+  setTimeout(() => {
+    try {
+      const lines = code.split('\n');
+      const output = [];
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (line.startsWith('print(')) {
+          const inner = line.slice(6, -1);
+          if (inner.startsWith('f"') || inner.startsWith("f'")) {
+            let expr = inner.replace(/^f["']/, '').replace(/["']$/, '');
+            const vars = {};
+            for (const l of lines) {
+              const eq = l.indexOf('=');
+              if (eq > 0 && !l.trim().startsWith('#') && !l.trim().startsWith('def ') && !l.trim().startsWith('return') && !l.trim().startsWith('@') && !l.trim().startsWith('for ') && !l.trim().startsWith('if ') && !l.trim().startsWith('else') && !l.trim().startsWith('elif')) {
+                let vname = l.slice(0, eq).trim();
+                let vval = l.slice(eq + 1).trim();
+                if (vval.startsWith('"') || vval.startsWith("'")) vval = vval.replace(/^["']/, '').replace(/["']$/, '');
+                else if (!isNaN(vval)) vval = Number(vval);
+                else if (vval === 'True') vval = true;
+                else if (vval === 'False') vval = false;
+                else {
+                  try { vval = JSON.parse(vval.replace(/'/g, '"')); } catch(e) {}
+                }
+                vars[vname] = vval;
+              }
+            }
+            const res = expr.replace(/\{(\w+)\}/g, (_, k) => vars[k] !== undefined ? vars[k] : `{${k}}`);
+            output.push(String(res));
+          } else {
+            try { output.push(String(eval(inner))); } catch(e) { output.push(`[eval: ${inner}]`); }
+          }
+        } else if (line && !line.startsWith('#') && !line.startsWith('def ') && !line.startsWith('return') && !line.startsWith('for ') && !line.startsWith('if ') && !line.startsWith('else') && !line.startsWith('elif') && !line.startsWith('@') && !line.includes('=') && line !== '') {
+          output.push(line);
+        }
+      }
+      const out = output.length > 0 ? output.join('\n') : '# 执行完毕';
+      el.className = 'output-box success';
+      el.innerHTML = `<span style="color:var(--muted)">&gt; 输出：</span>\n${out.replace(/</g,'&lt;').replace(/>/g,'&gt;')}`;
+    } catch(e) {
+      el.className = 'output-box error';
+      el.textContent = `Error: ${e.message}`;
+    }
+  }, 300);
+}
+
+// ========== MOCK HTTP ==========
+function mockHttp(code) {
+  const el = document.getElementById('mock-output');
+  const responses = {
+    200: { status: 200, body: { code: 200, message: "success", data: [{ id: 1, name: "小明" }] } },
+    404: { status: 404, body: { code: 404, message: "Not Found", error: "请求的资源不存在" } },
+    429: { status: 429, body: { code: 429, message: "Too Many Requests", error: "请求过快，限流中", retry_after: 60 } },
+    500: { status: 500, body: { code: 500, message: "Internal Server Error", error: "服务器内部错误" } }
+  };
+  const resp = responses[code];
+  const colors = { 200: 'var(--green)', 404: 'var(--red)', 429: 'var(--orange)', 500: 'var(--red)' };
+  el.innerHTML = `
+<span style="color:var(--muted)">HTTP/1.1 ${resp.status}</span>
+<span style="color:${colors[code]}">Content-Type: application/json</span>
+
+${JSON.stringify(resp.body, null, 2)}`;
+}
+
+// ========== MOCK API ==========
+function mockApi() {
+  const el = document.getElementById('mock-api-output');
+  el.innerHTML = `<span style="color:var(--muted)">HTTP/1.1 200 OK</span>
+<span style="color:var(--green)">Content-Type: application/json</span>
+<span style="color:var(--muted)">X-Cache: MISS</span>
+
+${JSON.stringify({
+    code: 200,
+    message: "success",
+    data: [
+      { id: 1, name: "小明", email: "xiaoming@example.com" },
+      { id: 2, name: "小红", email: "xiaohong@example.com" },
+      { id: 3, name: "小刚", email: "xiaogang@example.com" }
+    ]
+  }, null, 2)}`;
+}
+
+// ========== QUIZ ==========
+const quizData = [
+  { q: 'Python 中定义函数的正确关键字是？', options: ['function', 'def', 'func', 'define'], correct: 1 },
+  { q: 'HTTP 状态码 404 表示什么？', options: ['服务器错误', '请求成功', '资源未找到', '重定向'], correct: 2 },
+  { q: '下面哪个是合法的 Python 字典？', options: ['["a", "b"]', '{"a": 1, "b": 2}', '("a", "b")', '{"a", "b"}'], correct: 1 },
+  { q: 'JSON 中字符串必须使用哪种引号？', options: ['单引号', '双引号', '两种都行', '反引号'], correct: 1 },
+  { q: 'Flask 中定义路由的装饰器是？', options: ['@app.route()', '@route.app()', '@flask.route()', '@url.route()'], correct: 0 },
+  { q: 'Python 装饰器 @xxx 的本质是什么？', options: ['特殊语法', '函数套函数', '类的继承', '模块导入'], correct: 1 },
+  { q: '本项目 @cache_response 装饰器的作用是？', options: ['限流', '缓存 API 响应', '记录日志', '验证权限'], correct: 1 },
+  { q: '状态码 429 通常在什么时候返回？', options: ['登录成功', '请求太频繁被限流', '数据库连接失败', '页面不存在'], correct: 1 },
+  { q: '项目模块化的主要好处是？', options: ['让程序更慢', '让代码更容易维护', '代码行数变多', '没法调试'], correct: 1 },
+  { q: '本项目中 api/ 层的职责是？', options: ['执行 SQL 查询', '处理 HTTP 请求和返回响应', '写 HTML', '管理数据库连接'], correct: 1 }
+];
+
+let quizAnswered = new Array(quizData.length).fill(false);
+let quizCorrect = 0;
+
+function buildQuiz() {
+  const container = document.getElementById('quiz-container');
+  container.innerHTML = '';
+  quizData.forEach((item, idx) => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.id = `q-${idx}`;
+    div.innerHTML = `<p><strong>第 ${idx+1} 题：</strong>${item.q}</p>`;
+    const optsDiv = document.createElement('div');
+    item.options.forEach((opt, oi) => {
+      const btn = document.createElement('button');
+      btn.className = 'quiz-option';
+      btn.textContent = `${String.fromCharCode(65 + oi)}. ${opt}`;
+      btn.onclick = () => answerQuiz(idx, oi);
+      optsDiv.appendChild(btn);
+    });
+    div.appendChild(optsDiv);
+    const res = document.createElement('div');
+    res.className = 'quiz-result';
+    res.id = `qr-${idx}`;
+    div.appendChild(res);
+    container.appendChild(div);
+  });
+  updateScore();
+}
+
+function answerQuiz(qIdx, ans) {
+  if (quizAnswered[qIdx]) return;
+  quizAnswered[qIdx] = true;
+  const item = quizData[qIdx];
+  const card = document.getElementById(`q-${qIdx}`);
+  const opts = card.querySelectorAll('.quiz-option');
+  opts.forEach((btn, i) => {
+    btn.style.pointerEvents = 'none';
+    if (i === item.correct) btn.classList.add('correct');
+    else if (i === ans && i !== item.correct) btn.classList.add('wrong');
+  });
+  const res = document.getElementById(`qr-${qIdx}`);
+  if (ans === item.correct) {
+    quizCorrect++;
+    res.className = 'quiz-result show';
+    res.style.color = 'var(--green)';
+    res.textContent = '\u2714 正确！';
+  } else {
+    res.className = 'quiz-result show';
+    res.style.color = 'var(--red)';
+    res.textContent = `\u2718 正确答案是 ${String.fromCharCode(65 + item.correct)}`;
+  }
+  updateScore();
+}
+
+function updateScore() {
+  const a = quizAnswered.filter(Boolean).length;
+  document.getElementById('quiz-score').textContent = `${quizCorrect} / ${a}`;
+}
+
+function resetQuiz() {
+  quizAnswered = new Array(quizData.length).fill(false);
+  quizCorrect = 0;
+  updateScore();
+  document.querySelectorAll('.quiz-option').forEach(el => {
+    el.classList.remove('correct', 'wrong');
+    el.style.pointerEvents = 'auto';
+  });
+  document.querySelectorAll('.quiz-result').forEach(el => {
+    el.className = 'quiz-result';
+    el.textContent = '';
+  });
+}
+
+buildQuiz();
+</script>
+</body>
+</html>
